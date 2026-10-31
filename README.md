@@ -44,6 +44,8 @@
 
 ### 联网方式
 
+先选后端，填在 `search_engine` 里：
+
 | 值 | 说明 | 要 key 吗 |
 | --- | --- | --- |
 | `astrbot` | 复用 AstrBot 自带的网页搜索 | 不用 |
@@ -53,7 +55,20 @@
 | `custom` | 任意兼容 JSON 的搜索接口 | 看接口 |
 | `none` | 不联网，直接问模型 | 不用（会编，别用） |
 
-`custom` 的用法：给接口地址和取值路径，插件自己拼请求、自己取字段。
+各后端的对应配置项：
+
+| 后端 | 要填的键 |
+| --- | --- |
+| `qianfan` | `qianfan_api_key` / `qianfan_top_k` / `qianfan_recency` |
+| `bocha` | `bocha_api_key` |
+| `searxng` | `searxng_base`（你的 SearXNG 地址）/ `searxng_time_range` |
+| `custom` | 见下面那段 |
+
+> `astrbot` 后端在不同版本暴露的接口不一样，插件会挨个试；全都用不上时，
+> 如果配了千帆 / 博查 / SearXNG 的 key，会自动往下退，不会直接失败。
+
+`custom` 的用法：用 `custom_endpoint` 给接口地址、用 `custom_items_path` 给取值路径，
+插件自己拼请求、自己取字段。
 
 ```text
 custom_endpoint      https://api.example.com/search?q={query}&key={key}
@@ -63,7 +78,18 @@ custom_items_path    data.webPages.value
 custom_map           {"title":"name","url":"url","snippet":"content","date":"time"}
 ```
 
-占位符 `{query}` `{key}` `{top_k}` 会自动替换。
+占位符 `{query}` `{key}` `{top_k}` 会自动替换。`custom_method` 选 `GET` 或 `POST`。
+
+### 翻什么
+
+| 配置 | 说明 |
+| --- | --- |
+| `topics` | 想让它翻的方向清单，一行一条。留空就用内置的五个 |
+| `explore_ratio` | 有多大概率不按清单、自己换个角度找，0~1，默认 0.35 |
+| `interval_hours` | 每隔几小时翻一轮，默认 3；填 0.5 就是半小时 |
+
+`explore_ratio` 的自行探索**不会多花一次模型调用** —— 它只是在你的方向后面加个
+角度词（「最近一周的新进展」「反常识的地方」之类），检索和抽取还是同一套流程。
 
 ### 口吻
 
