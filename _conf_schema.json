@@ -1,0 +1,303 @@
+{
+  "enabled": {
+    "description": "总开关",
+    "type": "bool",
+    "hint": "关掉后不再自动出去翻，但手动指令和自然语言触发还能用",
+    "default": true
+  },
+  "interval_hours": {
+    "description": "多久翻一次（小时）",
+    "type": "float",
+    "hint": "0.25 就是 15 分钟一次。默认 3 小时",
+    "default": 3.0
+  },
+  "search_engine": {
+    "description": "联网方式",
+    "type": "string",
+    "hint": "astrbot = 复用 AstrBot 自带网页搜索；qianfan = 百度千帆；bocha = 博查；searxng = 自建 SearXNG（不用 key）；custom = 任意 JSON 接口；none = 直接问模型（会编）",
+    "options": [
+      "astrbot",
+      "qianfan",
+      "bocha",
+      "searxng",
+      "custom",
+      "none"
+    ],
+    "labels": [
+      "AstrBot 自带搜索",
+      "百度千帆",
+      "博查 Bocha",
+      "自建 SearXNG",
+      "自定义 JSON 接口",
+      "直接问模型（不推荐）"
+    ],
+    "default": "astrbot"
+  },
+  "search_provider_id": {
+    "description": "总结用哪个模型",
+    "type": "string",
+    "hint": "只负责把搜回来的资料拆条和讲人话，不负责联网。留空 = 跟随 AstrBot 当前默认模型",
+    "default": ""
+  },
+  "search_timeout_seconds": {
+    "description": "单次搜索超时（秒）",
+    "type": "int",
+    "default": 60
+  },
+  "qianfan_api_key": {
+    "description": "千帆 API Key",
+    "type": "string",
+    "hint": "百度智能云千帆控制台的 API Key，每天免费 100 次检索。只有 联网方式=百度千帆 才需要",
+    "default": ""
+  },
+  "qianfan_top_k": {
+    "description": "每次捞几条网页",
+    "type": "int",
+    "hint": "1-20，默认 5。条数越多越费 token",
+    "default": 5,
+    "slider": {
+      "min": 1,
+      "max": 20,
+      "step": 1
+    }
+  },
+  "qianfan_recency": {
+    "description": "只要多久以内的",
+    "type": "string",
+    "options": [
+      "oneDay",
+      "oneWeek",
+      "oneMonth",
+      "oneYear",
+      "noLimit"
+    ],
+    "labels": [
+      "一天内",
+      "一周内",
+      "一月内",
+      "一年内",
+      "不限时间"
+    ],
+    "default": "oneWeek"
+  },
+  "bocha_api_key": {
+    "description": "博查 API Key",
+    "type": "string",
+    "hint": "open.bochaai.com 的 key。只有 联网方式=博查 才需要",
+    "default": ""
+  },
+  "bocha_count": {
+    "description": "博查每次捞几条",
+    "type": "int",
+    "default": 5,
+    "slider": {
+      "min": 1,
+      "max": 20,
+      "step": 1
+    }
+  },
+  "searxng_base_url": {
+    "description": "SearXNG 地址",
+    "type": "string",
+    "hint": "比如 http://127.0.0.1:8080。记得在 SearXNG 的 settings.yml 里把 json 格式打开",
+    "default": ""
+  },
+  "searxng_time_range": {
+    "description": "SearXNG 时间范围",
+    "type": "string",
+    "options": [
+      "",
+      "day",
+      "week",
+      "month",
+      "year"
+    ],
+    "labels": [
+      "不限",
+      "一天内",
+      "一周内",
+      "一月内",
+      "一年内"
+    ],
+    "default": "week"
+  },
+  "custom_endpoint": {
+    "description": "自定义接口地址",
+    "type": "string",
+    "hint": "可用占位符 {query} {key} {top_k}，例如 https://api.example.com/search?q={query}&key={key}",
+    "default": ""
+  },
+  "custom_method": {
+    "description": "自定义接口请求方式",
+    "type": "string",
+    "options": [
+      "GET",
+      "POST"
+    ],
+    "default": "GET"
+  },
+  "custom_api_key": {
+    "description": "自定义接口的 key",
+    "type": "string",
+    "hint": "会替换模板里的 {key} 占位符",
+    "default": ""
+  },
+  "custom_headers": {
+    "description": "自定义请求头（JSON）",
+    "type": "text",
+    "hint": "例如 {\"Authorization\": \"Bearer {key}\"}，同样支持占位符",
+    "default": ""
+  },
+  "custom_body": {
+    "description": "自定义 POST 请求体（JSON 模板）",
+    "type": "text",
+    "hint": "只对 POST 生效，例如 {\"q\": \"{query}\", \"limit\": {top_k}}。留空会自动发 {\"query\",\"count\"}",
+    "default": ""
+  },
+  "custom_items_path": {
+    "description": "结果数组在哪",
+    "type": "string",
+    "hint": "点号路径，例如 data.webPages.value 或 results",
+    "default": "results"
+  },
+  "custom_map": {
+    "description": "字段映射（JSON）",
+    "type": "text",
+    "hint": "把每条对象的字段映射成 title/url/snippet/date，例如 {\"title\":\"name\",\"url\":\"url\",\"snippet\":\"content\",\"date\":\"time\"}",
+    "default": ""
+  },
+  "topics": {
+    "description": "感兴趣的方向",
+    "type": "list",
+    "hint": "每轮随机挑一个。留空就用内置默认列表",
+    "default": [
+      "AI 大模型最近有什么新发布或新能力",
+      "开源软件、开发工具最近有什么值得关注的新项目",
+      "科技圈最近有什么有意思的技术突破",
+      "有趣的冷知识、科学发现",
+      "独立开发者、小团队做出的有意思的东西"
+    ]
+  },
+  "explore_ratio": {
+    "description": "AI 自行探索的比例",
+    "type": "float",
+    "hint": "0 = 永远只按上面的清单搜；1 = 永远自己换角度发挥。默认 0.35",
+    "default": 0.35,
+    "slider": {
+      "min": 0.0,
+      "max": 1.0,
+      "step": 0.05
+    }
+  },
+  "max_items_per_run": {
+    "description": "一轮最多抽出几条",
+    "type": "int",
+    "hint": "越多越费 token，默认 3",
+    "default": 3,
+    "slider": {
+      "min": 1,
+      "max": 10,
+      "step": 1
+    }
+  },
+  "raw_char_limit": {
+    "description": "喂给模型的资料上限（字符）",
+    "type": "int",
+    "hint": "越小越省 token。默认 3000，一般够用",
+    "default": 3000
+  },
+  "compose_max_chars": {
+    "description": "讲给你听时的字数上限",
+    "type": "int",
+    "default": 220
+  },
+  "persona_hint": {
+    "description": "口吻补充（可留空）",
+    "type": "text",
+    "hint": "留空就纯用 AstrBot 里配置的人格。只有想在人格之外再补一句时才填，比如「讲东西喜欢打比方」",
+    "default": ""
+  },
+  "target_umo": {
+    "description": "讲给谁听（UMO）",
+    "type": "string",
+    "hint": "格式 平台ID:FriendMessage:QQ号 或 平台ID:GroupMessage:群号",
+    "default": ""
+  },
+  "deliver_threshold": {
+    "description": "攒够几条才自动开口",
+    "type": "int",
+    "hint": "1 = 攒到一条就讲。默认 2",
+    "default": 2,
+    "slider": {
+      "min": 1,
+      "max": 20,
+      "step": 1
+    }
+  },
+  "auto_deliver": {
+    "description": "到点自动讲",
+    "type": "bool",
+    "hint": "关掉后只在你说「讲讲」或者模型自己决定时才讲",
+    "default": true
+  },
+  "mood_mode": {
+    "description": "看心情讲",
+    "type": "bool",
+    "hint": "打开后它自己判断：不够有意思就憋着，攒得足够多了一定讲",
+    "default": false
+  },
+  "mood_threshold": {
+    "description": "攒到这个数就一定讲",
+    "type": "int",
+    "hint": "只有 看心情讲 打开时才生效，默认 6",
+    "default": 6,
+    "slider": {
+      "min": 2,
+      "max": 20,
+      "step": 1
+    }
+  },
+  "mood_skip_chance": {
+    "description": "想讲的概率",
+    "type": "float",
+    "hint": "0.7 = 七成会讲，三成继续憋。越小越挑剔",
+    "default": 0.7,
+    "slider": {
+      "min": 0.05,
+      "max": 1.0,
+      "step": 0.05
+    }
+  },
+  "quiet_hours": {
+    "description": "免打扰时段",
+    "type": "list",
+    "hint": "格式 [开始小时, 结束小时]，左闭右开。默认 [1, 8] 就是凌晨一点到早上八点不讲",
+    "default": [
+      1,
+      8
+    ]
+  },
+  "qzone_enabled": {
+    "description": "联动 QQ 空间",
+    "type": "bool",
+    "hint": "打开后会把评分够高的条目发成一条说说，配上原文链接的图。需要先装 QQ 空间类插件（提供发布工具）",
+    "default": false
+  },
+  "qzone_min_score": {
+    "description": "发空间的最低评分",
+    "type": "int",
+    "hint": "默认 8，只有特别有意思的才值得发出去",
+    "default": 8,
+    "slider": {
+      "min": 1,
+      "max": 10,
+      "step": 1
+    }
+  },
+  "qzone_with_image": {
+    "description": "说说带图",
+    "type": "bool",
+    "hint": "把原文链接当配图地址传给发布工具；如果对方插件不支持，会自动忽略",
+    "default": true
+  }
+}
