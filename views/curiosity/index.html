@@ -162,38 +162,56 @@
       <!-- ==================== 设置 ==================== -->
       <section class="panel" id="panel-settings">
         <div class="toolbar">
-          <span class="toolbar-note" id="settingsDirty">改动会直接写进插件配置</span>
+          <span class="toolbar-note" id="settingsDirty">改完按右边「保存改动」，立刻生效，不用重启</span>
           <div class="head-actions">
-            <button class="btn-ghost btn-tiny" id="btnReloadSettings">重读</button>
+            <button class="btn-ghost btn-tiny" id="btnReloadSettings">撤回改动</button>
             <button class="btn-solid" id="btnSaveSettings">保存改动</button>
           </div>
         </div>
         <div class="settings-msg" id="settingsMsg"></div>
 
+        <!-- 怎么进到这个设置页的说明 -->
+        <div class="card card-howto">
+          <div class="card-head">
+            <h2>这一页在哪儿</h2>
+            <span class="card-note">找不到那些 API Key 在哪儿填，就看这里</span>
+          </div>
+          <ol class="howto-list">
+            <li>打开 AstrBot 网页面板（就是你现在看的这个站点）。</li>
+            <li>点左边菜单里的<strong>「插件」</strong>。</li>
+            <li>在插件列表里找到<strong>「好奇心」</strong>，点它卡片上的<strong>「插件配置」</strong>按钮。</li>
+            <li>进去后能看到本插件的<strong>全部 35 项原生配置</strong>，API Key、接口地址都在那里面。</li>
+          </ol>
+          <div class="engine-tip howto-tip">
+            这一页（观察站）里的设置只有 25 项常用项，改坏了会当场告诉你哪里不对；
+            API Key、SearXNG 地址、自定义接口这些「填错整轮都跑不了」的，故意留在那个原生配置页里。
+          </div>
+        </div>
+
         <!-- 1. 搜索源（单独一块） -->
         <div class="card">
-          <div class="card-head">
+            <div class="card-head">
             <h2>搜索源</h2>
-            <span class="card-note">去哪捞网页。换个源，下次扫描立刻生效</span>
+            <span class="card-note">从哪儿捞网页。换一个源，下一次扫描就用新的</span>
           </div>
 
           <div class="field-grid">
             <label class="field">
-              <span class="field-label">联网方式</span>
+              <span class="field-label">用哪个搜索服务</span>
               <select id="f_search_engine" data-key="search_engine"></select>
-              <span class="field-hint">选定后下面只显示这一种源要填的参数</span>
+              <span class="field-hint">选好以后，下面只会显示这一个服务要填的东西</span>
             </label>
 
             <label class="field">
-              <span class="field-label">单次搜索超时（秒）</span>
+              <span class="field-label">一次搜索最多等几秒</span>
               <input id="f_search_timeout_seconds" data-key="search_timeout_seconds" type="number" min="10" max="600" step="1" />
-              <span class="field-hint">网络差就调大，默认 60</span>
+              <span class="field-hint">网络慢就调大一点。默认 60 秒</span>
             </label>
 
             <label class="field field-wide">
-              <span class="field-label">总结用哪个模型</span>
-              <input id="f_search_provider_id" data-key="search_provider_id" type="text" placeholder="留空 = 跟随 AstrBot 默认模型" autocomplete="off" />
-              <span class="field-hint">只负责把搜回来的资料拆条和讲人话，不负责联网</span>
+              <span class="field-label">用哪个模型来写（可留空）</span>
+              <input id="f_search_provider_id" data-key="search_provider_id" type="text" placeholder="留空 = 用 AstrBot 当前默认的模型" autocomplete="off" />
+              <span class="field-hint">这个模型只负责把搜到的内容整理好、写成话，它本身不联网</span>
             </label>
           </div>
 
@@ -202,16 +220,16 @@
             <div class="engine-head">百度千帆 · 每天免费 100 次</div>
             <div class="field-grid">
               <label class="field">
-                <span class="field-label">每次捞几条</span>
+                <span class="field-label">一次捞几条结果</span>
                 <input id="f_qianfan_top_k" data-key="qianfan_top_k" type="number" min="1" max="20" step="1" />
-                <span class="field-hint">1-20，越多越费 token</span>
+                <span class="field-hint">可填 1 到 20。条数越多，消耗的 token 越多</span>
               </label>
               <label class="field">
-                <span class="field-label">只要多久以内的</span>
+                <span class="field-label">只要多长时间以内的</span>
                 <select id="f_qianfan_recency" data-key="qianfan_recency"></select>
               </label>
             </div>
-            <div class="engine-tip">API Key 在主配置页的「千帆 API Key」里填，这里不放 key —— 免得改坏了一整轮全失败。</div>
+            <div class="engine-tip">还差一个「千帆 API Key」才能用。<strong>填法：左边菜单「插件」→ 找到「好奇心」→ 点「插件配置」→ 找到「千帆 API Key」</strong>，把 key 粘进去保存。这一页故意不放 key，因为 key 填错的话整轮扫描都会失败，却看不出是填错了。</div>
           </div>
 
           <!-- 博查 -->
@@ -219,11 +237,11 @@
             <div class="engine-head">博查 Bocha</div>
             <div class="field-grid">
               <label class="field">
-                <span class="field-label">每次捞几条</span>
+                <span class="field-label">一次捞几条结果</span>
                 <input id="f_bocha_count" data-key="bocha_count" type="number" min="1" max="20" step="1" />
               </label>
             </div>
-            <div class="engine-tip">API Key 在主配置页的「博查 API Key」里填。</div>
+            <div class="engine-tip">还差一个「博查 API Key」才能用。<strong>填法：左边菜单「插件」→「好奇心」→「插件配置」→ 找到「博查 API Key」</strong>。</div>
           </div>
 
           <!-- SearXNG -->
@@ -231,27 +249,27 @@
             <div class="engine-head">自建 SearXNG · 不用 key</div>
             <div class="field-grid">
               <label class="field">
-                <span class="field-label">时间范围</span>
+                <span class="field-label">只要多长时间以内的</span>
                 <select id="f_searxng_time_range" data-key="searxng_time_range"></select>
               </label>
             </div>
-            <div class="engine-tip">实例地址在主配置页的「SearXNG 地址」里填，记得在 settings.yml 里打开 json 格式。</div>
+            <div class="engine-tip">还差一个「SearXNG 地址」才能用。<strong>填法：左边菜单「插件」→「好奇心」→「插件配置」→ 找到「SearXNG 地址」</strong>，填你自建实例的网址。另外别忘了在 SearXNG 自己的 settings.yml 里把 json 格式打开，否则它不会返回结果。</div>
           </div>
 
           <!-- 自定义 -->
           <div class="engine-block" data-engine="custom">
             <div class="engine-head">自定义 JSON 接口</div>
-            <div class="engine-tip">接口地址、请求头、请求体、字段映射都在主配置页填（占位符 {query} {key} {top_k}）。</div>
+            <div class="engine-tip">适合接自己搭的或者别人的搜索接口。要填「接口地址、请求方式、API Key、请求头、请求体、从哪个字段取结果」这六样，<strong>填法：左边菜单「插件」→「好奇心」→「插件配置」</strong>，往下找同名的六项。请求体里可以用 {query}（换成搜索词）、{key}（换成 API Key）、{top_k}（换成条数）这三样东西（保存前原样写进请求体里就行）。</div>
           </div>
 
           <div class="engine-block" data-engine="astrbot">
             <div class="engine-head">AstrBot 自带搜索</div>
-            <div class="engine-tip">复用 AstrBot 自己的网页搜索能力，不需要额外 key。失败时会自动往下退到千帆 / 博查 / SearXNG（有配的话）。</div>
+            <div class="engine-tip">直接用 AstrBot 自己配好的网页搜索，不用另外填 key。要是它失败了，会自己往下试千帆、博查、SearXNG（你配了哪个就用哪个）。</div>
           </div>
 
           <div class="engine-block" data-engine="none">
-            <div class="engine-head">直接问模型</div>
-            <div class="engine-tip">不联网，模型凭记忆答 —— 会编，还要花 token。不推荐。</div>
+            <div class="engine-head">不联网，直接问模型</div>
+            <div class="engine-tip">它不会去网上搜，只会凭模型自己的记忆回答。这样容易说出根本不存在的消息，而且照样要花 token。一般不选这个。</div>
           </div>
         </div>
 
@@ -259,27 +277,28 @@
         <div class="card">
           <div class="card-head">
             <h2>翻什么</h2>
-            <span class="card-note">它每次出门的目标</span>
+            <span class="card-note">它每次出门要去找什么样的东西</span>
           </div>
           <div class="field-grid">
             <label class="field field-wide">
-              <span class="field-label">感兴趣的方向（一行一个）</span>
+              <span class="field-label">想让它关注的方向（一行写一条）</span>
               <textarea id="f_topics" data-key="topics" rows="6" spellcheck="false"></textarea>
-              <span class="field-hint">每轮随机挑一个。全删空会恢复内置默认五项</span>
+              <span class="field-hint">每次扫描会从这里面随机挑一条去搜。如果全删光，会自动恢复成内置的 5 条默认方向</span>
             </label>
             <label class="field">
-              <span class="field-label">多久翻一次（小时）</span>
+              <span class="field-label">隔几小时翻一次</span>
               <input id="f_interval_hours" data-key="interval_hours" type="number" min="0.25" max="168" step="0.25" />
-              <span class="field-hint">0.25 = 15 分钟一次</span>
+              <span class="field-hint">可以填小数，比如 0.25 就是每 15 分钟一次，1 就是每小时一次</span>
             </label>
             <label class="field">
-              <span class="field-label">AI 自行探索比例</span>
+              <span class="field-label">自己跑偏的概率（0 到 1）</span>
               <input id="f_explore_ratio" data-key="explore_ratio" type="number" min="0" max="1" step="0.05" />
-              <span class="field-hint">0 = 只按清单搜，1 = 永远自己换角度</span>
+              <span class="field-hint">填 0 = 永远只按上面的方向搜；填 1 = 每次都在方向上加个新角度自己发挥；填 0.35 = 大约三成的时候会自己发挥</span>
             </label>
             <label class="field">
-              <span class="field-label">一轮最多抽几条</span>
+              <span class="field-label">一次最多收几条</span>
               <input id="f_max_items_per_run" data-key="max_items_per_run" type="number" min="1" max="10" step="1" />
+              <span class="field-hint">这一轮搜索最多存几条进藏品库，默认 3 条</span>
             </label>
           </div>
         </div>
@@ -288,30 +307,31 @@
         <div class="card">
           <div class="card-head">
             <h2>讲述</h2>
-            <span class="card-note">什么时候、讲给谁、讲多少</span>
+            <span class="card-note">什么时候讲、讲给谁、讲多长</span>
           </div>
           <div class="field-grid">
             <label class="field field-wide">
-              <span class="field-label">讲给谁听（UMO）</span>
-              <input id="f_target_umo" data-key="target_umo" type="text" placeholder="平台ID:FriendMessage:QQ号  或  平台ID:GroupMessage:群号" autocomplete="off" />
-              <span class="field-hint">留空就只等你开口，不会自己找人讲</span>
+              <span class="field-label">讲给谁听（填会话标识）</span>
+              <input id="f_target_umo" data-key="target_umo" type="text" placeholder="私聊填   平台ID:FriendMessage:QQ号&#10;群聊填   平台ID:GroupMessage:群号" autocomplete="off" />
+              <span class="field-hint">这是 AstrBot 内部用的会话地址，两行示例看输入框里的灰色文字。留空的话，它就不主动找人讲话，只等你开口问它</span>
             </label>
             <label class="field">
-              <span class="field-label">攒够几条才自动开口</span>
+              <span class="field-label">攒够几条才主动开口</span>
               <input id="f_deliver_threshold" data-key="deliver_threshold" type="number" min="1" max="50" step="1" />
-              <span class="field-hint">填 1 = 攒到一条就讲</span>
+              <span class="field-hint">填 1 = 攒到一条就讲；填 2 = 攒够两条再一起讲</span>
             </label>
             <label class="field">
-              <span class="field-label">讲的时候字数上限</span>
+              <span class="field-label">讲话字数上限</span>
               <input id="f_compose_max_chars" data-key="compose_max_chars" type="number" min="60" max="1000" step="10" />
+              <span class="field-hint">它一次最多说多少个字，默认 220</span>
             </label>
             <label class="field field-check">
               <input id="f_enabled" data-key="enabled" type="checkbox" />
-              <span class="field-label">总开关（关掉后不再自动出门翻）</span>
+              <span class="field-label">总开关（关掉后它就不再自己出门翻东西）</span>
             </label>
             <label class="field field-check">
               <input id="f_auto_deliver" data-key="auto_deliver" type="checkbox" />
-              <span class="field-label">到点自动讲</span>
+              <span class="field-label">攒够了就自动讲（不勾的话必须你开口它才讲）</span>
             </label>
           </div>
 
@@ -320,26 +340,26 @@
           <div class="field-grid">
             <label class="field field-check">
               <input id="f_mood_mode" data-key="mood_mode" type="checkbox" />
-              <span class="field-label">看心情讲（不够有意思就憋着）</span>
+              <span class="field-label">看心情讲（觉得不够有意思就先憋着不讲）</span>
             </label>
             <label class="field">
-              <span class="field-label">攒到这个数就一定讲</span>
+              <span class="field-label">憋到几条就非讲不可</span>
               <input id="f_mood_threshold" data-key="mood_threshold" type="number" min="2" max="20" step="1" />
-              <span class="field-hint">只在「看心情讲」打开时生效</span>
+              <span class="field-hint">只有勾上「看心情讲」才有用。攒到这么多条时，不管心情如何都会讲</span>
             </label>
             <label class="field">
-              <span class="field-label">想讲的概率</span>
+              <span class="field-label">有心情讲的比例（0 到 1）</span>
               <input id="f_mood_skip_chance" data-key="mood_skip_chance" type="number" min="0.05" max="1" step="0.05" />
-              <span class="field-hint">0.7 = 七成会讲，三成继续憋</span>
+              <span class="field-hint">填 0.7 = 七成情况会讲，三成情况继续憋着</span>
             </label>
             <label class="field">
-              <span class="field-label">免打扰（起 ~ 止，小时）</span>
+              <span class="field-label">免打扰时段（从几点到几点，填 0-24 的整点）</span>
               <div class="hour-pair">
                 <input id="f_quiet_a" type="number" min="0" max="23" step="1" />
-                <span class="hour-dash">~</span>
+                <span class="hour-dash">到</span>
                 <input id="f_quiet_b" type="number" min="0" max="24" step="1" />
               </div>
-              <span class="field-hint">默认 1 ~ 8 = 凌晨一点到早上八点不讲</span>
+              <span class="field-hint">默认 1 到 8，意思是凌晨 1 点到早上 8 点之间不会来打扰你</span>
             </label>
           </div>
         </div>
@@ -348,15 +368,15 @@
         <div class="card">
           <div class="card-head">
             <h2>口吻</h2>
-            <span class="card-note">默认纯用 AstrBot 里配的人格</span>
+            <span class="card-note">默认完全使用 AstrBot 里配好的人格，不用在这里填什么</span>
           </div>
           <div class="field-grid">
             <label class="field field-wide">
-              <span class="field-label">口吻补充（可留空）</span>
-              <textarea id="f_persona_hint" data-key="persona_hint" rows="3" spellcheck="false" placeholder="留空就是纯用人格。只有想在人格之外再补一句时才填，比如「讲东西喜欢打比方」"></textarea>
+              <span class="field-label">口吻补充（一般留空就行）</span>
+              <textarea id="f_persona_hint" data-key="persona_hint" rows="3" spellcheck="false" placeholder="留空 = 完全用你配的那个人格。只有想在人格之外再补一句话的时候才填，比如「讲东西喜欢打比方」"></textarea>
             </label>
           </div>
-          <div class="engine-head">当前实际用的人格</div>
+          <div class="engine-head">现在实际在用的人格（下面这段就是它说话前看到的设定）</div>
           <pre class="persona-pre" id="personaPre">读取中…</pre>
         </div>
 
@@ -364,13 +384,13 @@
         <div class="card">
           <div class="card-head">
             <h2>省 token</h2>
-            <span class="card-note">越小越省，太小会漏掉细节</span>
+            <span class="card-note">数字越小越省钱，但太小会漏掉细节</span>
           </div>
           <div class="field-grid">
             <label class="field">
-              <span class="field-label">喂给模型的资料上限（字符）</span>
+              <span class="field-label">一次最多把多少字的资料交给模型</span>
               <input id="f_raw_char_limit" data-key="raw_char_limit" type="number" min="500" max="20000" step="100" />
-              <span class="field-hint">默认 3000，一般够用</span>
+              <span class="field-hint">单位是字符。默认 3000，一般够用；调小更省钱，调大能保留更多细节</span>
             </label>
           </div>
         </div>
@@ -379,21 +399,21 @@
         <div class="card">
           <div class="card-head">
             <h2>QQ 空间</h2>
-            <span class="card-note">需要先装提供发布工具的 QQ 空间插件</span>
+            <span class="card-note">需要你的 AstrBot 里已经装了一个能发 QQ 空间说说的插件</span>
           </div>
           <div class="field-grid">
             <label class="field field-check">
               <input id="f_qzone_enabled" data-key="qzone_enabled" type="checkbox" />
-              <span class="field-label">联动 QQ 空间</span>
+              <span class="field-label">自动把攒到的好东西发到 QQ 空间</span>
             </label>
             <label class="field field-check">
               <input id="f_qzone_with_image" data-key="qzone_with_image" type="checkbox" />
-              <span class="field-label">说说带图（拿原文链接当配图）</span>
+              <span class="field-label">说说自动带图（直接拿原文链接当配图）</span>
             </label>
             <label class="field">
-              <span class="field-label">发空间的最低评分</span>
+              <span class="field-label">多少分以上才发（1 到 10）</span>
               <input id="f_qzone_min_score" data-key="qzone_min_score" type="number" min="1" max="10" step="1" />
-              <span class="field-hint">1-10，默认 8，只发特别有意思的</span>
+              <span class="field-hint">每条内容会被打 1 到 10 分。默认 8 分，意思是只发它自己觉得特别有意思的</span>
             </label>
           </div>
         </div>
@@ -403,7 +423,7 @@
     <footer class="foot">
       <span>好奇心观察站</span>
       <span class="foot-dots">◦ ◦ ◦</span>
-      <span>检索靠接口，嘴是它自己的</span>
+      <span>搜索靠接口，说话是它自己的事</span>
     </footer>
 
     <script type="module" src="./assets/app.js"></script>
