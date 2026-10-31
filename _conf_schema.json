@@ -1,16 +1,4 @@
 {
-  "enabled": {
-    "description": "总开关",
-    "type": "bool",
-    "hint": "关掉后不再自动出去翻，但手动指令和自然语言触发还能用",
-    "default": true
-  },
-  "interval_hours": {
-    "description": "多久翻一次（小时）",
-    "type": "float",
-    "hint": "0.25 就是 15 分钟一次。默认 3 小时",
-    "default": 3.0
-  },
   "search_engine": {
     "description": "联网方式",
     "type": "string",
@@ -166,22 +154,22 @@
     "hint": "把每条对象的字段映射成 title/url/snippet/date，例如 {\"title\":\"name\",\"url\":\"url\",\"snippet\":\"content\",\"date\":\"time\"}",
     "default": ""
   },
-  "topics": {
-    "description": "感兴趣的方向",
-    "type": "list",
-    "hint": "每轮随机挑一个。留空就用内置默认列表",
-    "default": [
-      "AI 大模型最近有什么新发布或新能力",
-      "开源软件、开发工具最近有什么值得关注的新项目",
-      "科技圈最近有什么有意思的技术突破",
-      "有趣的冷知识、科学发现",
-      "独立开发者、小团队做出的有意思的东西"
-    ]
+  "enabled": {
+    "description": "总开关",
+    "type": "bool",
+    "hint": "关掉后不再自动出去翻，但手动指令和自然语言触发还能用",
+    "default": true
+  },
+  "interval_hours": {
+    "description": "多久翻一次（小时）",
+    "type": "float",
+    "hint": "0.25 就是 15 分钟一次。默认 3 小时",
+    "default": 3.0
   },
   "explore_ratio": {
     "description": "AI 自行探索的比例",
     "type": "float",
-    "hint": "0 = 永远只按上面的清单搜；1 = 永远自己换角度发挥。默认 0.35",
+    "hint": "0 = 永远只按下面的清单搜；1 = 永远自己换角度发挥。默认 0.35",
     "default": 0.35,
     "slider": {
       "min": 0.0,
@@ -200,22 +188,17 @@
       "step": 1
     }
   },
-  "raw_char_limit": {
-    "description": "喂给模型的资料上限（字符）",
-    "type": "int",
-    "hint": "越小越省 token。默认 3000，一般够用",
-    "default": 3000
-  },
-  "compose_max_chars": {
-    "description": "讲给你听时的字数上限",
-    "type": "int",
-    "default": 220
-  },
-  "persona_hint": {
-    "description": "口吻补充（可留空）",
-    "type": "text",
-    "hint": "留空就纯用 AstrBot 里配置的人格。只有想在人格之外再补一句时才填，比如「讲东西喜欢打比方」",
-    "default": ""
+  "topics": {
+    "description": "感兴趣的方向",
+    "type": "list",
+    "hint": "每轮随机挑一个。留空就用内置默认列表",
+    "default": [
+      "AI 大模型最近有什么新发布或新能力",
+      "开源软件、开发工具最近有什么值得关注的新项目",
+      "科技圈最近有什么有意思的技术突破",
+      "有趣的冷知识、科学发现",
+      "独立开发者、小团队做出的有意思的东西"
+    ]
   },
   "target_umo": {
     "description": "讲给谁听（UMO）",
@@ -276,6 +259,23 @@
       1,
       8
     ]
+  },
+  "persona_hint": {
+    "description": "口吻补充（可留空）",
+    "type": "text",
+    "hint": "留空就纯用 AstrBot 里配置的人格。只有想在人格之外再补一句时才填，比如「讲东西喜欢打比方」",
+    "default": ""
+  },
+  "raw_char_limit": {
+    "description": "喂给模型的资料上限（字符）",
+    "type": "int",
+    "hint": "越小越省 token。默认 3000，一般够用",
+    "default": 3000
+  },
+  "compose_max_chars": {
+    "description": "讲给你听时的字数上限",
+    "type": "int",
+    "default": 220
   },
   "qzone_enabled": {
     "description": "联动 QQ 空间",
