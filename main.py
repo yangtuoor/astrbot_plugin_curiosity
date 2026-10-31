@@ -37,6 +37,8 @@ from astrbot.api import AstrBotConfig, logger
 from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star, StarTools
 
+from quart import request
+
 PLUGIN_NAME = "astrbot_plugin_curiosity"
 
 # 各家搜索接口的固定端点（custom 引擎不用这些）
@@ -173,6 +175,58 @@ _MIGRATIONS = [
     ("finds", "shared_at", "REAL"),
     ("runs", "engine", "TEXT"),
 ]
+
+# 面板里能改的键白名单。
+# 只放开这几个：都是"改了立刻生效、不需要重建连接或重启"的。
+# 搜索后端的 key / 地址故意不放进来 —— 改错了整轮扫描就全失败，
+# 而且面板改配置是"先存后重启"语义不明确，容易让人以为存了就生效。
+_EDITABLE_KEYS = {
+    "enabled": bool,
+    "interval_hours": float,
+    "search_engine": str,
+    "search_provider_id": str,
+    "search_timeout_seconds": int,
+    "qianfan_top_k": int,
+    "qianfan_recency": str,
+    "bocha_count": int,
+    "searxng_time_range": str,
+    "topics": list,
+    "explore_ratio": float,
+    "max_items_per_run": int,
+    "raw_char_limit": int,
+    "compose_max_chars": int,
+    "persona_hint": str,
+    "target_umo": str,
+    "deliver_threshold": int,
+    "auto_deliver": bool,
+    "mood_mode": bool,
+    "mood_threshold": int,
+    "mood_skip_chance": float,
+    "quiet_hours": list,
+    "qzone_enabled": bool,
+    "qzone_min_score": int,
+    "qzone_with_image": bool,
+}
+
+# 数值键的合法区间，面板改完在服务端再夹一次，防止填出 0 或负数
+_KEY_RANGES = {
+    "interval_hours": (0.25, 168),
+    "search_timeout_seconds": (10, 600),
+    "qianfan_top_k": (1, 20),
+    "bocha_count": (1, 20),
+    "explore_ratio": (0.0, 1.0),
+    "max_items_per_run": (1, 10),
+    "raw_char_limit": (500, 20000),
+    "compose_max_chars": (60, 1000),
+    "deliver_threshold": (1, 50),
+    "mood_threshold": (2, 20),
+    "mood_skip_chance": (0.05, 1.0),
+    "qzone_min_score": (1, 10),
+}
+
+_ENGINE_OPTIONS = ("astrbot", "qianfan", "bocha", "searxng", "custom", "none")
+_RECENCY_OPTIONS = ("oneDay", "oneWeek", "oneMonth", "oneYear", "noLimit")
+_SEARXNG_RANGE_OPTIONS = ("", "day", "week", "month", "year")
 
 
 def _now() -> float:
@@ -738,12 +792,17 @@ class CuriosityPlugin(Star):
                             settings = self.context.get_config().get("provider_settings", {}) or {}
                         except Exception:  # noqa: BLE001
                             settings = {}
+                        # 关键字传参：这个签名是 kw-only 的，
+                        # 而且返回的是 (persona_id, Personality, force_id, is_webchat) 四元组，
+                        # 不是人格对象本身 —— 直接当对象取会永远拿到空。
                         persona = await resolve(
-                            umo,
-                            "",
-                            (self.target_umo.split(":") or [""])[0],
-                            settings,
+                            umo=umo,
+                            conversation_persona_id=None,
+                            platform_name=(self.target_umo.split(":") or [""])[0],
+                            provider_settings=settings,
                         )
+                        if isinstance(persona, tuple) and len(persona) >= 2:
+                            persona = persona[1]
                     except TypeError:
                         persona = await resolve(umo)
                     text = self._persona_text(persona)
@@ -751,7 +810,7 @@ class CuriosityPlugin(Star):
                         return text
                 getter = getattr(pm, "get_default_persona_v3", None)
                 if callable(getter):
-                    persona = getter()
+                    persona = getter(umo)
                     if asyncio.iscoroutine(persona):
                         persona = await persona
                     text = self._persona_text(persona)
@@ -2236,6 +2295,202 @@ class CuriosityPlugin(Star):
             logger.warning(f"{_log_prefix()} 面板发空间出错：{exc}")
             return self._api_err(str(exc))
 
+    # ------------------------------------------------------------------
+    # 设置（面板里直接改）
+    # ------------------------------------------------------------------
+    def _conf_path(self) -> Path | None:
+        """找到本插件那份配置文件的绝对路径。
+
+        AstrBot 把配置存在 `data/config/<插件名>_config.json`。
+        这里不硬编码 data 目录，而是从已有的配置对象上反查，
+        免得 Windows / 容器里路径结构不一样。
+        """
+        for attr in ("path", "config_path", "file_path"):
+            v = getattr(self.config, attr, None)
+            if isinstance(v, str) and v.endswith(".json"):
+                return Path(v)
+        # 退路：StarTools 提供的数据目录的上一级的上一级去找
+        try:
+            cand = Path(StarTools.get_data_dir(PLUGIN_NAME)).parent.parent / "config"
+            for p in cand.glob(f"{PLUGIN_NAME}*_config.json"):
+                return p
+        except Exception:  # noqa: BLE001
+            pass
+        return None
+
+    def _settings_payload(self) -> dict[str, Any]:
+        """给面板用的完整设置快照。"""
+        engines = [
+            ["astrbot", "AstrBot 自带搜索"],
+            ["qianfan", "百度千帆"],
+            ["bocha", "博查 Bocha"],
+            ["searxng", "自建 SearXNG"],
+            ["custom", "自定义 JSON 接口"],
+            ["none", "直接问模型（不推荐）"],
+        ]
+        recency = [
+            ["oneDay", "一天内"],
+            ["oneWeek", "一周内"],
+            ["oneMonth", "一月内"],
+            ["oneYear", "一年内"],
+            ["noLimit", "不限时间"],
+        ]
+        searxng_range = [
+            ["", "不限"],
+            ["day", "一天内"],
+            ["week", "一周内"],
+            ["month", "一月内"],
+            ["year", "一年内"],
+        ]
+        q = self.quiet_hours
+        return {
+            "values": {
+                "enabled": self.enabled,
+                "interval_hours": self.interval_hours,
+                "search_engine": self.engine,
+                "search_provider_id": self.provider_id,
+                "search_timeout_seconds": self.timeout_seconds,
+                "qianfan_top_k": self.qianfan_top_k,
+                "qianfan_recency": self.qianfan_recency,
+                "bocha_count": self.bocha_count,
+                "searxng_time_range": self.searxng_time_range,
+                "topics": self.topics,
+                "explore_ratio": self.explore_ratio,
+                "max_items_per_run": self.max_items_per_run,
+                "raw_char_limit": self.raw_char_limit,
+                "compose_max_chars": self.compose_max_chars,
+                "persona_hint": self.persona_hint,
+                "target_umo": self.target_umo,
+                "deliver_threshold": self.deliver_threshold,
+                "auto_deliver": self.auto_deliver,
+                "mood_mode": self.mood_mode,
+                "mood_threshold": self.mood_threshold,
+                "mood_skip_chance": self.mood_skip_chance,
+                "quiet_hours": [q[0], q[1]],
+                "qzone_enabled": self.qzone_enabled,
+                "qzone_min_score": self.qzone_min_score,
+                "qzone_with_image": self.qzone_with_image,
+            },
+            "options": {
+                "search_engine": engines,
+                "qianfan_recency": recency,
+                "searxng_time_range": searxng_range,
+            },
+            # 只读信息，让面板知道哪些后端还得去主面板填 key
+            "readonly_hint": {
+                "engines_need_config": {
+                    "qianfan": "千帆 API Key 要在主配置页填（qianfan_api_key）",
+                    "bocha": "博查 API Key 要在主配置页填（bocha_api_key）",
+                    "searxng": "SearXNG 地址要在主配置页填（searxng_base_url）",
+                    "custom": "自定义接口的地址 / 请求体要在主配置页填",
+                },
+            },
+            "conf_path": str(self._conf_path() or ""),
+        }
+
+    def _coerce(self, key: str, value: Any) -> Any:
+        """按白名单声明的类型把面板传来的值转成正确类型，并夹区间。"""
+        want = _EDITABLE_KEYS[key]
+        if want is bool:
+            if isinstance(value, str):
+                return value.strip().lower() in ("1", "true", "yes", "on")
+            return bool(value)
+        if want is int:
+            v = int(round(float(value)))
+        elif want is float:
+            v = float(value)
+        elif want is list:
+            if isinstance(value, str):
+                items = [s.strip() for s in re.split(r"[\n,，]", value)]
+            elif isinstance(value, list):
+                items = [str(s).strip() for s in value]
+            else:
+                items = []
+            items = [s for s in items if s]
+            if key == "quiet_hours":
+                if len(items) < 2:
+                    raise ValueError("免打扰时段要两个数字，比如 1 和 8")
+                a, b = int(items[0]), int(items[1])
+                if not (0 <= a <= 23 and 0 <= b <= 24):
+                    raise ValueError("免打扰时段的小时要在 0-24 之间")
+                return [a, b]
+            return items or list(DEFAULT_TOPICS)
+        else:
+            v = str(value if value is not None else "").strip()
+
+        rng = _KEY_RANGES.get(key)
+        if rng:
+            lo, hi = rng
+            v = max(lo, min(hi, v))
+        return v
+
+    def _validate_enum(self, key: str, value: Any) -> Any:
+        if key == "search_engine" and value not in _ENGINE_OPTIONS:
+            raise ValueError(f"联网方式只能是 {'/'.join(_ENGINE_OPTIONS)}")
+        if key == "qianfan_recency" and value not in _RECENCY_OPTIONS:
+            raise ValueError("时间范围不合法")
+        if key == "searxng_time_range" and value not in _SEARXNG_RANGE_OPTIONS:
+            raise ValueError("SearXNG 时间范围不合法")
+        return value
+
+    async def api_settings(self) -> dict[str, Any]:
+        """GET：把当前所有可改设置吐给面板。"""
+        try:
+            return self._api_ok(self._settings_payload())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"{_log_prefix()} 面板读设置出错：{exc}")
+            return self._api_err(str(exc))
+
+    async def api_settings_save(self) -> dict[str, Any]:
+        """POST：把面板改的设置写回配置文件。
+
+        注意：AstrBot 的 `register_web_api` **不会**把请求体当参数传进来，
+        必须自己从 quart 的 `request` 里取。只认 `_EDITABLE_KEYS` 白名单里的键，
+        其余一律忽略（防止把 key 冲掉）。
+        """
+        try:
+            try:
+                body = await request.get_json(force=True, silent=True) or {}
+            except Exception:  # noqa: BLE001
+                body = {}
+            if not isinstance(body, dict):
+                body = {}
+            incoming = body.get("values") if isinstance(body.get("values"), dict) else body
+            changed: list[str] = []
+            errors: dict[str, str] = {}
+            for key, raw in (incoming or {}).items():
+                if key not in _EDITABLE_KEYS:
+                    continue
+                try:
+                    val = self._coerce(key, raw)
+                    val = self._validate_enum(key, val)
+                except (TypeError, ValueError) as exc:
+                    errors[key] = str(exc)
+                    continue
+                self.config[key] = val
+                changed.append(key)
+            if changed:
+                self.config.save_config()
+            # @property 每次都读 self.config，写进去就立刻生效
+            logger.info(f"{_log_prefix()} 面板改了设置：{', '.join(changed) or '（无改动）'}")
+            return self._api_ok({
+                "changed": changed,
+                "errors": errors,
+                "settings": self._settings_payload(),
+            })
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"{_log_prefix()} 面板保存设置出错：{exc}")
+            return self._api_err(str(exc))
+
+    async def api_persona_preview(self) -> dict[str, Any]:
+        """把「实际用来讲解的人格」原样返回，方便面板显示。"""
+        try:
+            prompt = await self._get_persona_prompt(None)
+            return self._api_ok({"persona": (prompt or "").strip()})
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(f"{_log_prefix()} 面板读人格出错：{exc}")
+            return self._api_err(str(exc))
+
     def _register_apis(self) -> None:
         reg = self.context.register_web_api
         base = f"/{PLUGIN_NAME}"
@@ -2246,6 +2501,9 @@ class CuriosityPlugin(Star):
             ("page/run", self.api_run, ["POST"], "立刻扫一轮"),
             ("page/tell", self.api_tell, ["POST"], "提炼并发送"),
             ("page/share", self.api_share, ["POST"], "发到 QQ 空间"),
+            ("page/settings", self.api_settings, ["GET"], "读设置"),
+            ("page/settings/save", self.api_settings_save, ["POST"], "存设置"),
+            ("page/persona", self.api_persona_preview, ["GET"], "当前人格"),
         ]
         for path, handler, methods, desc in routes:
             reg(f"{base}/{path}", handler, methods, desc)
