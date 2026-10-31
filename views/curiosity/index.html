@@ -28,6 +28,7 @@
       <button class="tab active" data-tab="console">指挥舱</button>
       <button class="tab" data-tab="finds">藏品库</button>
       <button class="tab" data-tab="logs">航行日志</button>
+      <button class="tab" data-tab="settings">设置</button>
       <span class="tabs-spacer"></span>
       <span class="pill" id="pillQueue">待讲 0 条</span>
       <button class="btn-ghost btn-tiny" id="btnRefresh">刷新</button>
@@ -154,6 +155,246 @@
           </div>
           <div class="logs" id="logsBody">
             <div class="empty">读取中…</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================== 设置 ==================== -->
+      <section class="panel" id="panel-settings">
+        <div class="toolbar">
+          <span class="toolbar-note" id="settingsDirty">改动会直接写进插件配置</span>
+          <div class="head-actions">
+            <button class="btn-ghost btn-tiny" id="btnReloadSettings">重读</button>
+            <button class="btn-solid" id="btnSaveSettings">保存改动</button>
+          </div>
+        </div>
+        <div class="settings-msg" id="settingsMsg"></div>
+
+        <!-- 1. 搜索源（单独一块） -->
+        <div class="card">
+          <div class="card-head">
+            <h2>搜索源</h2>
+            <span class="card-note">去哪捞网页。换个源，下次扫描立刻生效</span>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span class="field-label">联网方式</span>
+              <select id="f_search_engine" data-key="search_engine"></select>
+              <span class="field-hint">选定后下面只显示这一种源要填的参数</span>
+            </label>
+
+            <label class="field">
+              <span class="field-label">单次搜索超时（秒）</span>
+              <input id="f_search_timeout_seconds" data-key="search_timeout_seconds" type="number" min="10" max="600" step="1" />
+              <span class="field-hint">网络差就调大，默认 60</span>
+            </label>
+
+            <label class="field field-wide">
+              <span class="field-label">总结用哪个模型</span>
+              <input id="f_search_provider_id" data-key="search_provider_id" type="text" placeholder="留空 = 跟随 AstrBot 默认模型" autocomplete="off" />
+              <span class="field-hint">只负责把搜回来的资料拆条和讲人话，不负责联网</span>
+            </label>
+          </div>
+
+          <!-- 千帆 -->
+          <div class="engine-block" data-engine="qianfan">
+            <div class="engine-head">百度千帆 · 每天免费 100 次</div>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">每次捞几条</span>
+                <input id="f_qianfan_top_k" data-key="qianfan_top_k" type="number" min="1" max="20" step="1" />
+                <span class="field-hint">1-20，越多越费 token</span>
+              </label>
+              <label class="field">
+                <span class="field-label">只要多久以内的</span>
+                <select id="f_qianfan_recency" data-key="qianfan_recency"></select>
+              </label>
+            </div>
+            <div class="engine-tip">API Key 在主配置页的「千帆 API Key」里填，这里不放 key —— 免得改坏了一整轮全失败。</div>
+          </div>
+
+          <!-- 博查 -->
+          <div class="engine-block" data-engine="bocha">
+            <div class="engine-head">博查 Bocha</div>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">每次捞几条</span>
+                <input id="f_bocha_count" data-key="bocha_count" type="number" min="1" max="20" step="1" />
+              </label>
+            </div>
+            <div class="engine-tip">API Key 在主配置页的「博查 API Key」里填。</div>
+          </div>
+
+          <!-- SearXNG -->
+          <div class="engine-block" data-engine="searxng">
+            <div class="engine-head">自建 SearXNG · 不用 key</div>
+            <div class="field-grid">
+              <label class="field">
+                <span class="field-label">时间范围</span>
+                <select id="f_searxng_time_range" data-key="searxng_time_range"></select>
+              </label>
+            </div>
+            <div class="engine-tip">实例地址在主配置页的「SearXNG 地址」里填，记得在 settings.yml 里打开 json 格式。</div>
+          </div>
+
+          <!-- 自定义 -->
+          <div class="engine-block" data-engine="custom">
+            <div class="engine-head">自定义 JSON 接口</div>
+            <div class="engine-tip">接口地址、请求头、请求体、字段映射都在主配置页填（占位符 {query} {key} {top_k}）。</div>
+          </div>
+
+          <div class="engine-block" data-engine="astrbot">
+            <div class="engine-head">AstrBot 自带搜索</div>
+            <div class="engine-tip">复用 AstrBot 自己的网页搜索能力，不需要额外 key。失败时会自动往下退到千帆 / 博查 / SearXNG（有配的话）。</div>
+          </div>
+
+          <div class="engine-block" data-engine="none">
+            <div class="engine-head">直接问模型</div>
+            <div class="engine-tip">不联网，模型凭记忆答 —— 会编，还要花 token。不推荐。</div>
+          </div>
+        </div>
+
+        <!-- 2. 翻什么 -->
+        <div class="card">
+          <div class="card-head">
+            <h2>翻什么</h2>
+            <span class="card-note">它每次出门的目标</span>
+          </div>
+          <div class="field-grid">
+            <label class="field field-wide">
+              <span class="field-label">感兴趣的方向（一行一个）</span>
+              <textarea id="f_topics" data-key="topics" rows="6" spellcheck="false"></textarea>
+              <span class="field-hint">每轮随机挑一个。全删空会恢复内置默认五项</span>
+            </label>
+            <label class="field">
+              <span class="field-label">多久翻一次（小时）</span>
+              <input id="f_interval_hours" data-key="interval_hours" type="number" min="0.25" max="168" step="0.25" />
+              <span class="field-hint">0.25 = 15 分钟一次</span>
+            </label>
+            <label class="field">
+              <span class="field-label">AI 自行探索比例</span>
+              <input id="f_explore_ratio" data-key="explore_ratio" type="number" min="0" max="1" step="0.05" />
+              <span class="field-hint">0 = 只按清单搜，1 = 永远自己换角度</span>
+            </label>
+            <label class="field">
+              <span class="field-label">一轮最多抽几条</span>
+              <input id="f_max_items_per_run" data-key="max_items_per_run" type="number" min="1" max="10" step="1" />
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. 讲述 -->
+        <div class="card">
+          <div class="card-head">
+            <h2>讲述</h2>
+            <span class="card-note">什么时候、讲给谁、讲多少</span>
+          </div>
+          <div class="field-grid">
+            <label class="field field-wide">
+              <span class="field-label">讲给谁听（UMO）</span>
+              <input id="f_target_umo" data-key="target_umo" type="text" placeholder="平台ID:FriendMessage:QQ号  或  平台ID:GroupMessage:群号" autocomplete="off" />
+              <span class="field-hint">留空就只等你开口，不会自己找人讲</span>
+            </label>
+            <label class="field">
+              <span class="field-label">攒够几条才自动开口</span>
+              <input id="f_deliver_threshold" data-key="deliver_threshold" type="number" min="1" max="50" step="1" />
+              <span class="field-hint">填 1 = 攒到一条就讲</span>
+            </label>
+            <label class="field">
+              <span class="field-label">讲的时候字数上限</span>
+              <input id="f_compose_max_chars" data-key="compose_max_chars" type="number" min="60" max="1000" step="10" />
+            </label>
+            <label class="field field-check">
+              <input id="f_enabled" data-key="enabled" type="checkbox" />
+              <span class="field-label">总开关（关掉后不再自动出门翻）</span>
+            </label>
+            <label class="field field-check">
+              <input id="f_auto_deliver" data-key="auto_deliver" type="checkbox" />
+              <span class="field-label">到点自动讲</span>
+            </label>
+          </div>
+
+          <div class="op-sep"></div>
+
+          <div class="field-grid">
+            <label class="field field-check">
+              <input id="f_mood_mode" data-key="mood_mode" type="checkbox" />
+              <span class="field-label">看心情讲（不够有意思就憋着）</span>
+            </label>
+            <label class="field">
+              <span class="field-label">攒到这个数就一定讲</span>
+              <input id="f_mood_threshold" data-key="mood_threshold" type="number" min="2" max="20" step="1" />
+              <span class="field-hint">只在「看心情讲」打开时生效</span>
+            </label>
+            <label class="field">
+              <span class="field-label">想讲的概率</span>
+              <input id="f_mood_skip_chance" data-key="mood_skip_chance" type="number" min="0.05" max="1" step="0.05" />
+              <span class="field-hint">0.7 = 七成会讲，三成继续憋</span>
+            </label>
+            <label class="field">
+              <span class="field-label">免打扰（起 ~ 止，小时）</span>
+              <div class="hour-pair">
+                <input id="f_quiet_a" type="number" min="0" max="23" step="1" />
+                <span class="hour-dash">~</span>
+                <input id="f_quiet_b" type="number" min="0" max="24" step="1" />
+              </div>
+              <span class="field-hint">默认 1 ~ 8 = 凌晨一点到早上八点不讲</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. 口吻 -->
+        <div class="card">
+          <div class="card-head">
+            <h2>口吻</h2>
+            <span class="card-note">默认纯用 AstrBot 里配的人格</span>
+          </div>
+          <div class="field-grid">
+            <label class="field field-wide">
+              <span class="field-label">口吻补充（可留空）</span>
+              <textarea id="f_persona_hint" data-key="persona_hint" rows="3" spellcheck="false" placeholder="留空就是纯用人格。只有想在人格之外再补一句时才填，比如「讲东西喜欢打比方」"></textarea>
+            </label>
+          </div>
+          <div class="engine-head">当前实际用的人格</div>
+          <pre class="persona-pre" id="personaPre">读取中…</pre>
+        </div>
+
+        <!-- 5. 省 token -->
+        <div class="card">
+          <div class="card-head">
+            <h2>省 token</h2>
+            <span class="card-note">越小越省，太小会漏掉细节</span>
+          </div>
+          <div class="field-grid">
+            <label class="field">
+              <span class="field-label">喂给模型的资料上限（字符）</span>
+              <input id="f_raw_char_limit" data-key="raw_char_limit" type="number" min="500" max="20000" step="100" />
+              <span class="field-hint">默认 3000，一般够用</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 6. QQ 空间 -->
+        <div class="card">
+          <div class="card-head">
+            <h2>QQ 空间</h2>
+            <span class="card-note">需要先装提供发布工具的 QQ 空间插件</span>
+          </div>
+          <div class="field-grid">
+            <label class="field field-check">
+              <input id="f_qzone_enabled" data-key="qzone_enabled" type="checkbox" />
+              <span class="field-label">联动 QQ 空间</span>
+            </label>
+            <label class="field field-check">
+              <input id="f_qzone_with_image" data-key="qzone_with_image" type="checkbox" />
+              <span class="field-label">说说带图（拿原文链接当配图）</span>
+            </label>
+            <label class="field">
+              <span class="field-label">发空间的最低评分</span>
+              <input id="f_qzone_min_score" data-key="qzone_min_score" type="number" min="1" max="10" step="1" />
+              <span class="field-hint">1-10，默认 8，只发特别有意思的</span>
+            </label>
           </div>
         </div>
       </section>
