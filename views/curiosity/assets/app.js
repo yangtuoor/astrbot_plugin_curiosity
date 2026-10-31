@@ -480,7 +480,7 @@ function fillSettings(data) {
   if ($("f_quiet_b")) $("f_quiet_b").value = q[1];
 
   showEngineBlock(v.search_engine || "astrbot");
-  setText($("settingsDirty"), "改动会直接写进插件配置" + (data.conf_path ? "" : ""));
+  setText($("settingsDirty"), "改完按右边「保存改动」，立刻生效，不用重启");
   setText($("settingsMsg"), "");
 }
 
