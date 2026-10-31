@@ -1065,3 +1065,25 @@ html[data-theme="void"] .persona-pre,
 html[data-theme="void"] .engine-block {
   background: #f2efe6;
 }
+
+/* ---- 「这一页在哪儿」说明卡 ---- */
+.card-howto .howto-list {
+  margin: 14px 0 4px 0;
+  padding-left: 22px;
+  list-style: decimal;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--text);
+}
+.card-howto .howto-list li { margin: 2px 0; }
+.card-howto .howto-list strong {
+  color: var(--amber);
+  font-weight: 600;
+  padding: 0 3px;
+  border-bottom: 1px dashed rgba(255, 180, 84, 0.45);
+}
+.card-howto .howto-tip { margin-top: 14px; }
+html[data-theme="void"] .card-howto .howto-list strong {
+  color: #a8541a;
+  border-bottom-color: rgba(168, 84, 26, 0.35);
+}
