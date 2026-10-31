@@ -118,13 +118,14 @@ function showTab(name) {
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.toggle("active", tabs[i].getAttribute("data-tab") === name);
   }
-  var panels = { console: "panel-console", finds: "panel-finds", logs: "panel-logs" };
+  var panels = { console: "panel-console", finds: "panel-finds", logs: "panel-logs", settings: "panel-settings" };
   for (var k in panels) {
     var el = $(panels[k]);
     if (el) el.classList.toggle("active", k === name);
   }
   if (name === "finds") refreshFinds(true);
   if (name === "logs") refreshLogs();
+  if (name === "settings") loadSettings();
 }
 
 // ---------------------------------------------------------------- 状态条
@@ -418,6 +419,150 @@ function doShare() {
   );
 }
 
+// ---------------------------------------------------------------- 设置
+var settingsState = { loaded: false, data: null };
+
+function fillSelect(el, options, current) {
+  if (!el) return;
+  var html = "";
+  for (var i = 0; i < options.length; i++) {
+    var opt = options[i];
+    var val = opt[0];
+    var lab = opt[1];
+    var sel = String(val) === String(current == null ? "" : current) ? " selected" : "";
+    html += '<option value="' + esc(val) + '"' + sel + ">" + esc(lab) + "</option>";
+  }
+  el.innerHTML = html;
+}
+
+function setFieldValue(key, value) {
+  var el = document.querySelector('[data-key="' + key + '"]');
+  if (!el) return;
+  if (el.type === "checkbox") {
+    el.checked = !!value;
+  } else if (Array.isArray(value)) {
+    el.value = value.join("\n");
+  } else {
+    el.value = value == null ? "" : String(value);
+  }
+}
+
+function showEngineBlock(engine) {
+  var blocks = document.querySelectorAll(".engine-block");
+  for (var i = 0; i < blocks.length; i++) {
+    var on = blocks[i].getAttribute("data-engine") === engine;
+    blocks[i].classList.toggle("on", on);
+  }
+}
+
+function fillSettings(data) {
+  settingsState.data = data;
+  settingsState.loaded = true;
+  var v = data.values || {};
+  var opts = data.options || {};
+
+  fillSelect($("f_search_engine"), opts.search_engine || [], v.search_engine);
+  fillSelect($("f_qianfan_recency"), opts.qianfan_recency || [], v.qianfan_recency);
+  fillSelect($("f_searxng_time_range"), opts.searxng_time_range || [], v.searxng_time_range);
+
+  var keys = [
+    "search_provider_id", "search_timeout_seconds", "qianfan_top_k", "bocha_count",
+    "topics", "interval_hours", "explore_ratio", "max_items_per_run",
+    "target_umo", "deliver_threshold", "compose_max_chars", "enabled", "auto_deliver",
+    "mood_mode", "mood_threshold", "mood_skip_chance",
+    "persona_hint", "raw_char_limit",
+    "qzone_enabled", "qzone_with_image", "qzone_min_score",
+  ];
+  for (var i = 0; i < keys.length; i++) setFieldValue(keys[i], v[keys[i]]);
+
+  var q = v.quiet_hours || [1, 8];
+  if ($("f_quiet_a")) $("f_quiet_a").value = q[0];
+  if ($("f_quiet_b")) $("f_quiet_b").value = q[1];
+
+  showEngineBlock(v.search_engine || "astrbot");
+  setText($("settingsDirty"), "改动会直接写进插件配置" + (data.conf_path ? "" : ""));
+  setText($("settingsMsg"), "");
+}
+
+function collectSettings() {
+  var out = {};
+  var els = document.querySelectorAll("#panel-settings [data-key]");
+  for (var i = 0; i < els.length; i++) {
+    var el = els[i];
+    var key = el.getAttribute("data-key");
+    if (el.type === "checkbox") {
+      out[key] = el.checked;
+    } else if (key === "topics") {
+      out[key] = el.value.split(/\n/).map(function (s) { return s.trim(); }).filter(Boolean);
+    } else if (el.type === "number") {
+      out[key] = el.value === "" ? 0 : Number(el.value);
+    } else {
+      out[key] = el.value;
+    }
+  }
+  out.quiet_hours = [
+    Number($("f_quiet_a").value || 0),
+    Number($("f_quiet_b").value || 8),
+  ];
+  return out;
+}
+
+function loadSettings() {
+  if (!$("panel-settings")) return Promise.resolve();
+  return apiGet("page/settings", {}).then(
+    function (data) {
+      fillSettings(data || {});
+      loadPersona();
+      return data;
+    },
+    function (err) {
+      setText($("settingsMsg"), "读取设置失败：" + fail(err));
+      throw err;
+    }
+  );
+}
+
+function loadPersona() {
+  return apiGet("page/persona", {}).then(
+    function (d) {
+      var p = (d && d.persona) || "";
+      $("personaPre").textContent = p ? p : "（AstrBot 里没读到人格，将只用默认口吻）";
+    },
+    function () {
+      $("personaPre").textContent = "（读不到人格）";
+    }
+  );
+}
+
+function saveSettings() {
+  var btn = $("btnSaveSettings");
+  var values = collectSettings();
+  setText($("settingsMsg"), "正在保存…");
+  return withBusy(btn, "保存中…", function () {
+    return apiPost("page/settings/save", { values: values });
+  }).then(
+    function (r) {
+      var changed = (r && r.changed) || [];
+      var errors = (r && r.errors) || {};
+      var bad = Object.keys(errors);
+      if (bad.length) {
+        var lines = bad.map(function (k) { return k + "：" + errors[k]; });
+        setText($("settingsMsg"), "有 " + bad.length + " 项没通过：" + lines.join("；"));
+      } else if (!changed.length) {
+        setText($("settingsMsg"), "没有改动");
+      } else {
+        setText($("settingsMsg"), "已保存 " + changed.length + " 项，下次扫描就用新设置");
+      }
+      if (r && r.settings) fillSettings(r.settings);
+      return loadStatus().catch(function () {});
+    },
+    function (err) {
+      setText($("settingsMsg"), "保存失败：" + fail(err));
+      throw err;
+    }
+  );
+}
+
 // ---------------------------------------------------------------- 启动
 function bind() {
   var tabs = document.querySelectorAll(".tab");
@@ -442,6 +587,7 @@ function bind() {
     loadStatus().catch(function () {});
     if (state.tab === "finds") refreshFinds(true).catch(function () {});
     if (state.tab === "logs") refreshLogs().catch(function () {});
+    if (state.tab === "settings") loadSettings().catch(function () {});
   });
   $("btnReloadFinds").addEventListener("click", function () {
     refreshFinds(true).catch(function () {});
@@ -464,6 +610,23 @@ function bind() {
   $("findsMore").addEventListener("click", function () {
     loadMoreFinds().catch(function () {});
   });
+
+  // ---- 设置面板 ----
+  if ($("btnSaveSettings")) {
+    $("btnSaveSettings").addEventListener("click", function () {
+      saveSettings().catch(function () {});
+    });
+  }
+  if ($("btnReloadSettings")) {
+    $("btnReloadSettings").addEventListener("click", function () {
+      loadSettings().catch(function () {});
+    });
+  }
+  if ($("f_search_engine")) {
+    $("f_search_engine").addEventListener("change", function () {
+      showEngineBlock(this.value);
+    });
+  }
 }
 
 function start() {
@@ -475,11 +638,14 @@ function start() {
   }
   var readyP = typeof bridge.ready === "function" ? bridge.ready() : Promise.resolve(null);
   readyP
-    .then(function (ctx) {
-      applyTheme(!!(ctx && ctx.isDark));
+    .then(function (wrapped) {
+      // 官方文档的写法：ready() 给的是 ContextWrapper，要取 .context
+      var ctx = (wrapped && wrapped.context) || wrapped || {};
+      applyTheme(!!ctx.isDark);
       if (typeof bridge.onContext === "function") {
         bridge.onContext(function (next) {
-          applyTheme(!!(next && next.isDark));
+          var c = (next && next.context) || next || {};
+          applyTheme(!!c.isDark);
         });
       }
     }, function () {
