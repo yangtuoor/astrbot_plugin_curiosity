@@ -521,4 +521,7 @@ AstrBot 的人格管理器里实时取一次，取不到会写「（AstrBot 里�
 
 ## License
 
-MIT
+[AGPL-3.0](LICENSE)
+
+本项目采用 GNU Affero General Public License v3.0 授权。在 MIT 的基础上，AGPL 多了一条：
+如果你把它改造成网络服务对外提供，也必须以 AGPL 公开你修改后的完整源码。
